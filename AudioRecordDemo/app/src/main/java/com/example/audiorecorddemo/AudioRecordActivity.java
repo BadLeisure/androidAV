@@ -13,7 +13,10 @@ import android.widget.Button;
 
 import androidx.annotation.Nullable;
 
-public class AudioRecordActivity extends Activity implements View.OnClickListener{
+import java.io.File;
+import java.io.FileOutputStream;
+
+public class AudioRecordActivity extends Activity implements View.OnClickListener {
 
     private static final String TAG = "AudioRecordActivity";
     private HandlerThread recordThread;
@@ -21,22 +24,31 @@ public class AudioRecordActivity extends Activity implements View.OnClickListene
     private Handler recordHandler;
     private Handler playHandler;
     private AudioRecord audioRecord;
-    private volatile boolean  isRecording = false;
+    private volatile boolean isRecording = false;
     private int sampleRate = 44100;
-    private Button startRecord,stopRecord;
+    private Button startRecord, stopRecord;
+    private File file;
+    private FileOutputStream fileOutputStream;
 
-    
-    
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_record);
         initListener();
+        try{
+            file = new File(getFilesDir(), "test.pcm");
+            fileOutputStream = new FileOutputStream(file);
+            Log.d(TAG, "getFilesDir:"+getFilesDir());
+        }catch (Exception e){
+            Log.d(TAG, "onCreate: "+e.getMessage());
+        }
 
-        
+
+
     }
 
-    public void initListener(){
+    public void initListener() {
         startRecord = findViewById(R.id.btn_start_record);
         stopRecord = findViewById(R.id.btn_stop_record);
         startRecord.setOnClickListener(this);
@@ -52,23 +64,34 @@ public class AudioRecordActivity extends Activity implements View.OnClickListene
     /**
      * 开始录音
      */
-    public void startRecord(){
+    public void startRecord() {
         recordThread = new HandlerThread("recordThread");
         recordHandler = new Handler(recordThread.getLooper());
-        int bufferSize = AudioRecord.getMinBufferSize(sampleRate,AudioFormat.CHANNEL_IN_MONO,AudioFormat.ENCODING_PCM_16BIT);
-        Log.d(TAG, "bufferSize: "+bufferSize);
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC,sampleRate, AudioFormat.CHANNEL_IN_MONO
-                ,AudioFormat.ENCODING_PCM_16BIT,bufferSize);
+        int bufferSize = AudioRecord.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT);
+        Log.d(TAG, "bufferSize: " + bufferSize);
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, sampleRate, AudioFormat.CHANNEL_IN_MONO
+                , AudioFormat.ENCODING_PCM_16BIT, bufferSize);
         audioRecord.startRecording();
         isRecording = true;
         recordHandler.post(new Runnable() {
             byte[] buffer = new byte[1024];
+
             @Override
             public void run() {
-                while(isRecording){
+                while (isRecording) {
+                    int byteRead = audioRecord.read(buffer, 0, buffer.length);
+                    if (byteRead > 0) {
+                        try{
+                            fileOutputStream.write(buffer, 0, byteRead);
 
+                        }catch (Exception e){
+                            Log.d(TAG, "run:write "+e.getMessage());
+                        }
+                    }
                 }
+
             }
+
         });
 
     }
@@ -76,7 +99,7 @@ public class AudioRecordActivity extends Activity implements View.OnClickListene
     /**
      * 停止录音
      */
-      public void stopRecord(){
+    public void stopRecord() {
         if (audioRecord != null) {
             audioRecord.stop();
             audioRecord.release();
@@ -92,10 +115,10 @@ public class AudioRecordActivity extends Activity implements View.OnClickListene
 
     @Override
     public void onClick(View v) {
-      if(v == startRecord){
-          startRecord();
-      }else if(v == stop){
-          stopRecord();
-      }
+        if (v == startRecord) {
+            startRecord();
+        } else if (v == stopRecord) {
+            stopRecord();
+        }
     }
 }

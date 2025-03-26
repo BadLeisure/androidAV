@@ -18,6 +18,13 @@
 
         <activity android:name=".AudioRecordActivity"
                     android:exported="true">
+            <intent-filter>
+                <!-- 主启动入口 -->
+                <action android:name="android.intent.action.MAIN" />
+                <!-- 在应用启动器中显示 -->
+                <category android:name="android.intent.category.LAUNCHER" />
+
+            </intent-filter>
 
 
         </activity>
